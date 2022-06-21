@@ -1,0 +1,15 @@
+package {{packageName}};
+
+public final class {{targetClassName}} {
+
+  public static String toJson({{sourceClassName}} object) {
+    StringBuilder builder = new StringBuilder("{");
+    {{#fields}}
+    builder.append("\"{{value.name}}\": \"")
+        .append(object.{{value.getter}}())
+        .append("\"{{^last}},{{/last}}");
+    {{/fields}}
+    return builder.append("}").toString();
+  }
+
+}

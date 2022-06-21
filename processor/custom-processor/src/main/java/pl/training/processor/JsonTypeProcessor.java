@@ -40,7 +40,8 @@ public class JsonTypeProcessor extends AbstractProcessor {
     }
 
     private List<Field> toFields(TypeElement typeElement) {
-        return processingEnv.getElementUtils().getAllMembers(typeElement).stream()
+        return processingEnv.getElementUtils()
+                .getAllMembers(typeElement).stream()
                 .filter(this::isMethod)
                 .map(this::toSimpleName)
                 .filter(this::isGetter)
@@ -64,10 +65,11 @@ public class JsonTypeProcessor extends AbstractProcessor {
     private record Field(String getterName) {
 
         public static final String GETTER_PREFIX = "get";
+        private static final int START_INDEX = 1;
 
         public String getFieldName() {
             var name = getterName.substring(GETTER_PREFIX.length());
-            return toLowerCase(name.charAt(0)) + name.substring(1);
+            return toLowerCase(name.charAt(0)) + name.substring(START_INDEX);
         }
 
     }
