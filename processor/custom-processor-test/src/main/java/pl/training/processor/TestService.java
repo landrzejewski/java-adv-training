@@ -1,6 +1,6 @@
 package pl.training.processor;
 
-import pl.training.processor.UserJsonMapper;
+import static pl.training.processor.UserJsonMapper.toJson;
 
 @Log
 @Configurable
@@ -8,8 +8,7 @@ public class TestService {
 
     public static void main(String[] args) {
         var user = new User("Jan", "Kowalski", "test@training.pl", 23);
-        var mapper = new UserJsonMapper();
-        System.out.println(mapper.toJson(user));
+        System.out.println(toJson(user));
     }
 
 }

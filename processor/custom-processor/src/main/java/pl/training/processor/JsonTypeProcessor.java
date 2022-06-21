@@ -40,13 +40,13 @@ public class JsonTypeProcessor extends AbstractProcessor {
                 .filter(TypeElement.class::isInstance)
                 .map(TypeElement.class::cast)
                 .map(this::toFields)
-                .forEach(this::process);
+                .forEach(typeModel -> process(typeModel, typeElement));
     }
 
-    private void process(TypeModel typeModel) {
+    private void process(TypeModel typeModel, TypeElement typeElement) {
         var filer = processingEnv.getFiler();
         try {
-            var fileObject = filer.createSourceFile(typeModel.getQualifiedTargetClassName());
+            var fileObject = filer.createSourceFile(typeModel.getQualifiedTargetClassName(), typeElement);
             try (var writer = fileObject.openWriter()) {
                 template.execute(writer, typeModel);
             }
