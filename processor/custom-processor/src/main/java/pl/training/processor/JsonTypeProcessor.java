@@ -1,25 +1,33 @@
 package pl.training.processor;
 
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.util.DecoratedCollection;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.List;
 import java.util.Set;
 
 import static java.lang.Character.toLowerCase;
 import static javax.lang.model.element.ElementKind.METHOD;
+import static javax.tools.Diagnostic.Kind.ERROR;
 
 @SupportedAnnotationTypes("pl.training.processor.JsonType")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 public class JsonTypeProcessor extends AbstractProcessor {
 
     private final Set<String> excludedMethods = Set.of("getClass");
+    private final Mustache template = new DefaultMustacheFactory().compile("json-type.mustache");
 
     @Override
     public boolean process(Set<? extends TypeElement> elements, RoundEnvironment roundEnv) {
@@ -35,12 +43,20 @@ public class JsonTypeProcessor extends AbstractProcessor {
                 .forEach(this::process);
     }
 
-    private void process(List<Field> fields) {
-        fields.forEach(field -> processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, field.toString()));
+    private void process(TypeModel typeModel) {
+        var filer = processingEnv.getFiler();
+        try {
+            var fileObject = filer.createSourceFile(typeModel.getQualifiedTargetClassName());
+            try (var writer = fileObject.openWriter()) {
+                template.execute(writer, typeModel);
+            }
+        } catch (IOException e) {
+            processingEnv.getMessager().printMessage(ERROR, "Error: " + e.getMessage());
+        }
     }
 
-    private List<Field> toFields(TypeElement typeElement) {
-        return processingEnv.getElementUtils()
+    private TypeModel toFields(TypeElement typeElement) {
+        var fields = processingEnv.getElementUtils()
                 .getAllMembers(typeElement).stream()
                 .filter(this::isMethod)
                 .map(this::toSimpleName)
@@ -48,6 +64,16 @@ public class JsonTypeProcessor extends AbstractProcessor {
                 .filter(methodName -> !excludedMethods.contains(methodName))
                 .map(Field::new)
                 .toList();
+        return new TypeModel(getPackageName(typeElement), toSimpleName(typeElement), fields);
+    }
+
+    private String getPackageName(TypeElement typeElement) {
+        if (typeElement.getEnclosingElement() instanceof  PackageElement packageElement) {
+            return packageElement.getQualifiedName().toString();
+        } else {
+            processingEnv.getMessager().printMessage(ERROR, "Invalid type element");
+            return "";
+        }
     }
 
     private boolean isMethod(Element element) {
@@ -62,6 +88,32 @@ public class JsonTypeProcessor extends AbstractProcessor {
         return methodName.startsWith(Field.GETTER_PREFIX);
     }
 
+    private record TypeModel(String packageName, String className, List<Field> fields) {
+
+        private static final String CLASS_NAME_SUFFIX = "JsonMapper";
+
+        public String getQualifiedTargetClassName() {
+            return "%s.%s".formatted(getPackageName(), getTargetClassName());
+        }
+
+        public String getPackageName() {
+            return packageName;
+        }
+
+        public String getSourceClassName() {
+            return className;
+        }
+
+        public String getTargetClassName() {
+            return className + CLASS_NAME_SUFFIX;
+        }
+
+        public DecoratedCollection<Field> getFields() {
+            return new DecoratedCollection<>(fields);
+        }
+
+    }
+
     private record Field(String getterName) {
 
         public static final String GETTER_PREFIX = "get";
@@ -70,6 +122,10 @@ public class JsonTypeProcessor extends AbstractProcessor {
         public String getFieldName() {
             var name = getterName.substring(GETTER_PREFIX.length());
             return toLowerCase(name.charAt(0)) + name.substring(START_INDEX);
+        }
+
+        public String getGetterName() {
+            return getterName();
         }
 
     }
