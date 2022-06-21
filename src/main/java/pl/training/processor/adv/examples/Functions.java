@@ -1,8 +1,10 @@
 package pl.training.processor.adv.examples;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.function.*;
 
 @Log
@@ -10,6 +12,18 @@ public class Functions {
 
     private int abs(int value) {
         return value < 0 ? -value : value;
+    }
+
+    private int power(int value) {
+        return value * value;
+    }
+
+    private int powerAbs(int value) {
+        return power(abs(value));
+    }
+
+    private <A, B, C> Function<A, C> compose(Function<B, C> f, Function<A, B> g) {
+        return a -> f.apply(g.apply(a));
     }
 
     private String prepareResultMessage(Integer value, IntUnaryOperator calculation) {
@@ -39,7 +53,56 @@ public class Functions {
         log.info("Factorial for 4: " + factorial(4));
         log.info("Abs: " + prepareResultMessage(4, this::abs));
         log.info("Factorial: " + prepareResultMessage(4, this::factorial));
+        var powerAbs = compose(this::power, this::abs);
+        powerAbs.apply(3);
+
+        Option<Integer> optionalLong = new Some<>(1);
+        Option<Integer> emptyOptionalLong = new None<>();
+        var result = optionalLong
+                .flatMap(value -> divide(value, 3))
+                .map(this::abs);
+
     }
+
+    private Option<Integer> divide(Integer value, Integer divider) {
+        if (value == 0) {
+            return new None<>();
+        } else {
+            return new Some<>(value / divider);
+        }
+    }
+
+    sealed class Option<A> permits Some, None  {
+
+        public <B> Option<B> map(Function<A, B> mapper) {
+            return switch (this) {
+                case None<A> none -> new None<>();
+                case Some<A> some -> new Some<>(mapper.apply(some.value));
+                default -> throw new IllegalArgumentException();
+            };
+        }
+
+        public <B> Option<B> flatMap(Function<A, Option<B>> mapper) {
+            return switch (map(mapper)) {
+                case None<B> none -> new None<>();
+                case Some<B> some -> new Some<>(some.value);
+                default -> throw new IllegalArgumentException();
+            };
+        }
+
+    }
+
+    @RequiredArgsConstructor
+    final class Some<A> extends Option<A> {
+
+        private final A value;
+
+    }
+
+    final class None<A> extends Option<A> {
+    }
+
+
 
     public static void main(String[] args) {
         new Functions().start();
