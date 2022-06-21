@@ -1,6 +1,7 @@
 package pl.training.processor.adv.calculator.commons;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import lombok.RequiredArgsConstructor;
 
@@ -10,7 +11,7 @@ public class ViewRenderer {
 
     private final ViewResolver viewResolver;
 
-    public void render(ModelAndView modelAndView) {
+    public void render(@Observes ModelAndView modelAndView) {
         var viewName = modelAndView.viewName();
         var data = modelAndView.data();
         viewResolver.resolve(viewName).render(data);

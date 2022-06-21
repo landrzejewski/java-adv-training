@@ -1,2 +1,3 @@
 pl.training.processor.LogProcessor
 pl.training.processor.ConfigurableProcessor
+pl.training.processor.JsonTypeProcessor

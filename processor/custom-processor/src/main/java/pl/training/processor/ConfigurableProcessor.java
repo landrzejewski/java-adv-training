@@ -50,13 +50,17 @@ public class ConfigurableProcessor extends AbstractProcessor {
     private void saveDescriptors(ConfigurationDescriptorWrapper descriptors) {
         try {
             var file = getFile();
-            var parentFolder = file.getParentFile();
-            if (!parentFolder.exists() && !parentFolder.mkdirs()) {
-                throw new IOException("Failed to create target directory");
-            }
+            createIfNotExists(file);
             JAXB.marshal(descriptors, file);
         } catch (Exception exception) {
             processingEnv.getMessager().printMessage(ERROR, "Failed to write descriptor file " + exception.getMessage());
+        }
+    }
+
+    private void createIfNotExists(File file) throws IOException {
+        var parentFolder = file.getParentFile();
+        if (!parentFolder.exists() && !parentFolder.mkdirs()) {
+            throw new IOException("Failed to create target directory");
         }
     }
 

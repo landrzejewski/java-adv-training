@@ -3,7 +3,10 @@ package pl.training.processor.adv.examples;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import static pl.training.processor.adv.examples.Profile.ProfileName.DEVELOPMENT;
 import static pl.training.processor.adv.examples.Profile.ProfileName.TEST;
@@ -24,13 +27,31 @@ public class Annotations {
 
         //-------------------------------------------------------------
 
-        Class<Tasks> tasksClass = Tasks.class;
-        for (Method method : tasksClass.getDeclaredMethods()) {
+        var tasksClass = Tasks.class;
+        /*for (Method method : tasksClass.getDeclaredMethods()) {
             var annotation = method.getAnnotation(Task.class);
             if (annotation != null) {
                 method.invoke(tasksClass.getDeclaredConstructor().newInstance());
             }
-        }
+        }*/
+
+        Arrays.stream(Tasks.class.getDeclaredMethods())
+                .filter(Annotations::hasTestAnnotation)
+                .forEach(runMethod(tasksClass));
+    }
+
+    private static Consumer<Method> runMethod(Class<Tasks> tasksClass) {
+        return method -> {
+            try {
+                method.invoke(tasksClass.getDeclaredConstructor().newInstance());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        };
+    }
+
+    private static boolean hasTestAnnotation(Method method) {
+        return method.getAnnotation(Task.class) != null;
     }
 
 }
