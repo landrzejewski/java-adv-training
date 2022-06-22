@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 
 import java.time.Instant;
-import java.util.Optional;
+import java.util.Arrays;
 import java.util.function.*;
 
 @Log
@@ -60,8 +60,17 @@ public class Functions {
         Option<Integer> emptyOptionalLong = new None<>();
         var result = optionalLong
                 .flatMap(value -> divide(value, 3))
-                .map(this::abs);
+                .map(this::abs)
+                .getOrElse(() -> 3);
 
+        System.out.println(result);
+
+        //------------------------------------------------------------
+
+        //var list = new NotEmpty<Long>(1L, new NotEmpty<>(2L, new Empty<>()));
+
+        var list = FunctionalList.of(2, 3, 4, 5);
+        list.map(this::power);
     }
 
     private Option<Integer> divide(Integer value, Integer divider) {
@@ -83,11 +92,24 @@ public class Functions {
         }
 
         public <B> Option<B> flatMap(Function<A, Option<B>> mapper) {
-            return switch (map(mapper)) {
+            /*return switch (map(mapper)) {
                 case None<B> none -> new None<>();
                 case Some<B> some -> new Some<>(some.value);
                 default -> throw new IllegalArgumentException();
+            };*/
+            return map(mapper).getOrElse(None::new);
+        }
+
+        public A getOrElse(Supplier<A> supplier) {
+            return switch (this) {
+                case None<A> none -> supplier.get();
+                case Some<A> some -> some.value;
+                default -> throw new IllegalArgumentException();
             };
+        }
+
+        public Option<A> filter(Predicate<A> predicate) {
+            return flatMap(value -> predicate.test(value) ? new Some<>(value) : new None<>());
         }
 
     }
@@ -103,6 +125,45 @@ public class Functions {
     }
 
 
+    private <A, B> Function<Option<A>, Option<B>> lift(Function<A, B> function) {
+        return optionA -> optionA.map(function);
+    }
+
+    static sealed class FunctionalList<A> permits Empty, NotEmpty {
+
+        private FunctionalList() {
+        }
+
+        public static <A> FunctionalList<A> of(A ... values) {
+            if (values.length == 0) {
+                return new Empty<>();
+            }
+            var tail = Arrays.copyOfRange(values, 1, values.length);
+            return new NotEmpty<>(values[0], FunctionalList.of(tail));
+        }
+
+        public <B> FunctionalList<B> map(Function<A, B> mapper) {
+            return switch (this) {
+                case Empty<A> empty -> new Empty<>();
+                case NotEmpty<A> notEmpty -> new NotEmpty<>(mapper.apply(notEmpty.head), notEmpty.tail.map(mapper));
+                default -> throw new IllegalArgumentException();
+            };
+        }
+
+    }
+
+    static final class Empty<A> extends FunctionalList<A> {
+    }
+
+
+
+    @RequiredArgsConstructor
+    static final class NotEmpty<A> extends FunctionalList<A> {
+
+        private final A head;
+        private final FunctionalList<A> tail;
+
+    }
 
     public static void main(String[] args) {
         new Functions().start();
@@ -136,6 +197,7 @@ public class Functions {
 
         Function<Integer, String> converter = Object::toString;
         converter.apply(4);
+
     }
 
     private static void onData(String data) {
