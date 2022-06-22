@@ -6,6 +6,7 @@ import org.mapstruct.factory.Mappers;
 import pl.training.processor.adv.search.adapters.provider.GithubApi;
 import pl.training.processor.adv.search.adapters.provider.RetrofitProviderMapper;
 import pl.training.processor.adv.search.adapters.provider.RetrofitRepositoriesProvider;
+import pl.training.processor.adv.search.adapters.view.ConsoleClient;
 import pl.training.processor.adv.search.domain.SearchRepositoryService;
 import pl.training.processor.adv.search.ports.RepositoriesProvider;
 import pl.training.processor.adv.search.ports.SearchRepositoryUseCase;
@@ -53,13 +54,14 @@ public class SerachConfiguration {
         return new SearchRepositoryService(repositoriesProvider);
     }
 
-    public SearchRepositoryUseCase initialize() {
+    public ConsoleClient getClient() {
         var interceptor = loggingInterceptor();
         var clientHttp = okHttpClient(interceptor);
         var githubApi = githubApi(clientHttp);
         var providerMapper = providerMapper();
         var repositoriesProvider = repositoriesProvider(githubApi, providerMapper);
-        return searchRepositoryUseCase(repositoriesProvider);
+        var searchService = searchRepositoryUseCase(repositoriesProvider);
+        return new ConsoleClient(searchService);
     }
 
 }
